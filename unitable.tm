@@ -1,6 +1,13 @@
 use ../tomo-btui/btui.tm
 use <sys/wait.h>
 
+struct ColumnWidths(
+    codepoint=8,
+    text=6,
+    name=32,
+    description=32,
+)
+
 struct Codepoint(
     codepoint:Int32,
     text:Text?=none,
@@ -164,22 +171,24 @@ struct Unitable(
         else if key == "n"
             if search := self.search
                 for offset in (0).to(self.entries.length-1)
-                    index := (self._cursor + offset) mod1 self.entries.length
+                    index := (self._cursor + 1 + offset) mod1 self.entries.length
                     line := self.entries[index]!
                     if line.lower().has(search)
                         self.set_cursor(index)
-        else if key == "p"
+                        stop
+        else if key == "N"
             if search := self.search
                 for offset in (self.entries.length-1).to(0)
-                    index := (self._cursor + offset) mod1 self.entries.length
+                    index := (self._cursor - 1 + offset) mod1 self.entries.length
                     line := self.entries[index]!
                     if line.lower().has(search)
                         self.set_cursor(index)
+                        stop
 
     func update_search(self:&Unitable)
         key := get_key()
         search := self.search!
-        if key == "Escape" or key == "Enter"
+        if key == "Escape" or key == "Ctrl-c"
             self.search = none
             self.search_start = none
             return
@@ -188,11 +197,14 @@ struct Unitable(
             self.search_start = none
             return
         else if key == "Space"
-            self.search = search ++ " "
+            search = search ++ " "
         else if key == "Backspace"
-            self.search = search.to(-2)
+            search = search.to(-2)
         else if key.length == 1
-            self.search = search ++ key
+            search = search ++ key
+
+        search = search.lower()
+        self.search = search
 
         search_start := self.search_start!
         for offset in (0).to(self.entries.length-1)
@@ -200,6 +212,7 @@ struct Unitable(
             line := self.entries[index]!
             if line.lower().has(search)
                 self.set_cursor(index)
+                stop
 
     func move_cursor(self:&Unitable, delta:Int)
         self.set_cursor(self._cursor + delta)
