@@ -89,18 +89,14 @@ struct Unitable(
                 clear(Right)
                 if name := codepoint.name
                     style(fg=Cyan, bg=Normal, bold=no)
+                    if desc := codepoint.unicode_1_name
+                        name ++= " "++desc
                     write(" $name", ScreenVec2(14, y))
                     clear(Right)
                 else
                     style(fg=Red, bg=Normal, bold=yes)
                     write(" No name", ScreenVec2(14, y))
                     clear(Right)
-            else
-                style(fg=Red, bg=Normal, bold=yes)
-                write("Invalid codepoint")
-                clear(Right)
-                style(bold=no)
-
             if row == self._cursor
                 style(reverse=no)
 
