@@ -37,26 +37,26 @@ struct Codepoint(
     simple_lowercase:Int32?=none,
     simple_titlecase:Int32?=none,
 )
-    func parse(text:Text -> Codepoint)
+    func parse(text:Text -> Codepoint?)
         # For format details, see: https://www.unicode.org/L2/L1999/UnicodeData.html
         items := text.split(";")
-        codepoint := Codepoint(Int32.parse("0x"++items[1]!)!)
+        codepoint := Codepoint(Int32.parse("0x"++(items[1] or return none)) or return none)
         codepoint.text = Text.from_utf32([codepoint.codepoint])
-        codepoint.name = items[2]!
-        codepoint.category = items[3]!
-        codepoint.combining_class = items[4]!
-        codepoint.bidi_class = items[5]!
-        codepoint.decomposition_mapping = items[6]!
+        codepoint.name = items[2] or return none
+        codepoint.category = items[3] or return none
+        codepoint.combining_class = items[4] or return none
+        codepoint.bidi_class = items[5] or return none
+        codepoint.decomposition_mapping = items[6] or return none
         junk : Text
-        codepoint.decimal_digit = Int.parse(items[7]!, &junk)
-        codepoint.digit = Int.parse(items[8]!, &junk)
-        codepoint.numeric = Int.parse(items[9]!, &junk)
+        codepoint.decimal_digit = Int.parse(items[7] or return none, &junk)
+        codepoint.digit = Int.parse(items[8] or return none, &junk)
+        codepoint.numeric = Int.parse(items[9] or return none, &junk)
         codepoint.mirrored = items[10] == "Y"
         codepoint.unicode_1_name = items[11]
         codepoint.iso_comment = items[12]
-        codepoint.simple_uppercase = Int32.parse("0x"++items[13]!, &junk)
-        codepoint.simple_lowercase = Int32.parse("0x"++items[14]!, &junk)
-        codepoint.simple_titlecase = Int32.parse("0x"++items[15]!, &junk)
+        codepoint.simple_uppercase = Int32.parse("0x"++(items[13] or return none), &junk)
+        codepoint.simple_lowercase = Int32.parse("0x"++(items[14] or return none), &junk)
+        codepoint.simple_titlecase = Int32.parse("0x"++(items[15] or return none), &junk)
         return codepoint
 
     func info(self:Codepoint -> {Text:Text})
@@ -142,26 +142,26 @@ struct Unitable(
 
         for y in (1).to(size.y - 1)
             row := self._top + y - 1
-            codepoint := self.get_codepoint(row)
+            codepoint := self.get_codepoint(row) or skip
             codepoint.draw(y, highlighted=(row == self._cursor))
 
         if self.show_info
-            codepoint := self.get_codepoint()
-            info := codepoint.info()
-            height := info.length + 2
-            label_width := (_max_: k.width() for k in info.keys)!
-            value_width := (_max_: v.width() for v in info.values)! _max_ 50
-            width := label_width + 3 + value_width
-            top_left := ScreenVec2(size.x - width - 1, 1)
-            box_color := Color.Color256(222)
-            style(bg=box_color, fg=box_color)
-            fill_box(top_left, ScreenVec2(width, height))
-            style(fg=Color256(94))
-            for i,label in info.keys
-                write(label, pos=top_left + ScreenVec2(label_width + 1, i), Right)
-            style(fg=Black)
-            for i,value in info.values
-                write(value, pos=top_left + ScreenVec2(label_width + 2, i), Left)
+            if codepoint := self.get_codepoint()
+                info := codepoint.info()
+                height := info.length + 2
+                label_width := (_max_: k.width() for k in info.keys)!
+                value_width := (_max_: v.width() for v in info.values)! _max_ 50
+                width := label_width + 3 + value_width
+                top_left := ScreenVec2(size.x - width - 1, 1)
+                box_color := Color.Color256(222)
+                style(bg=box_color, fg=box_color)
+                fill_box(top_left, ScreenVec2(width, height))
+                style(fg=Color256(94))
+                for i,label in info.keys
+                    write(label, pos=top_left + ScreenVec2(label_width + 1, i), Right)
+                style(fg=Black)
+                for i,value in info.values
+                    write(value, pos=top_left + ScreenVec2(label_width + 2, i), Left)
 
         if search := self.search
             style(bg=Color256((if self.search_start then Byte(69) else Byte(27))), fg=Color(232))
@@ -221,23 +221,24 @@ struct Unitable(
         is "Ctrl-u"
             self.move_scroll(-get_size().y/2)
         is "Ctrl-c", "y"
-            if text := self.get_codepoint().text
-                if copy_to_clipboard(text)
-                    self.message = "Copied text!"
+            if codepoint := self.get_codepoint()
+                if text := codepoint.text
+                    if copy_to_clipboard(text)
+                        self.message = "Copied text!"
+                    else
+                        self.message = "Failed to copy to clipboard!"
+        is "u"
+            if codepoint := self.get_codepoint()
+                if copy_to_clipboard("U+$(codepoint.codepoint.hex())")
+                    self.message = "Copied U+$(codepoint.codepoint.hex())!"
                 else
                     self.message = "Failed to copy to clipboard!"
-        is "u"
-            codepoint := self.get_codepoint()
-            if copy_to_clipboard("U+$(codepoint.codepoint.hex())")
-                self.message = "Copied U+$(codepoint.codepoint.hex())!"
-            else
-                self.message = "Failed to copy to clipboard!"
         is "d"
-            codepoint := self.get_codepoint()
-            if copy_to_clipboard("$(codepoint.codepoint)")
-                self.message = "Copied $(codepoint.codepoint)!"
-            else
-                self.message = "Failed to copy to clipboard!"
+            if codepoint := self.get_codepoint()
+                if copy_to_clipboard("$(codepoint.codepoint)")
+                    self.message = "Copied $(codepoint.codepoint)!"
+                else
+                    self.message = "Failed to copy to clipboard!"
         is "i"
             self.show_info = not self.show_info
         is "/", "Ctrl-f"
@@ -261,8 +262,8 @@ struct Unitable(
                         self.set_cursor(index)
                         stop
 
-    func get_codepoint(self:Unitable, row:Int?=none -> Codepoint)
-        return Codepoint.parse(self.entries[row or self._cursor]!)
+    func get_codepoint(self:Unitable, row:Int?=none -> Codepoint?)
+        return Codepoint.parse(self.entries[row or self._cursor] or return none)
 
     func update_search(self:&Unitable)
         key := get_key()
@@ -301,7 +302,7 @@ struct Unitable(
         size := get_size()
         self._cursor = Int.clamped(pos, 1, self.entries.length)
         table_height := size.y - 2
-        self._top = Int.clamped(Int.clamped(self._top, self._cursor - table_height + 5, self._cursor + - 5), 1, self.entries.length - table_height + 1)
+        self._top = Int.clamped(Int.clamped(self._top, self._cursor - table_height + 5, self._cursor + - 5), 1, self.entries.length - table_height)
 
     func move_scroll(self:&Unitable, delta:Int)
         size := get_size()
