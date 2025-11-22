@@ -216,9 +216,6 @@ struct Unitable(
                     sleep(0.01)
                 else if key == "Left press"
                     self.set_cursor(self._top + mouse_pos.y - 1)
-        is "Right drag", "Middle drag"
-            # Prevent spamming the console too much
-            sleep(0.01)
         is "g"
             self.move_cursor(-self.entries.length)
         is "G"
@@ -275,9 +272,6 @@ struct Unitable(
                     if line.lower().has(search)
                         self.set_cursor(index)
                         stop
-        else
-            self.update()
-            return
 
     func get_codepoint(self:Unitable, row:Int?=none -> Codepoint?)
         return Codepoint.parse(self.entries[row or self._cursor] or return none)
@@ -300,9 +294,6 @@ struct Unitable(
             search = search.to(-2)
         else if key.length == 1
             search = search ++ key
-        else
-            self.update_search()
-            return
 
         search = search.lower()
         self.search = search
@@ -374,7 +365,9 @@ func main(unicode_data:Path?=none)
     hide_cursor()
     table.draw()
     while not table.quit
+        prev := table
         table.update()
-        table.draw()
+        if table != prev
+            table.draw()
 
     disable()
