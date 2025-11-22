@@ -15,6 +15,7 @@ _HELP := "
         d              - Copy the decimal codepoint of an entry to the clipboard
         Ctrl+f or /    - Search for text (enter to confirm)
         n/N            - Jump to next/previous search result
+        i              - Toggle info panel
 
 "
 
@@ -61,7 +62,9 @@ struct Codepoint(
     func info(self:Codepoint -> {Text:Text})
         return {
             "Symbol": (if self.codepoint > 32 then self.text or "" else ""),
-            "Codepoint": "U+$(self.codepoint.hex()) ($(self.codepoint))",
+            "UTF32": "$(self.codepoint.hex()) ($(self.codepoint))",
+            "UTF16": (if text := self.text then " ".join([u.hex() for u in text.utf16()]) ++ " (" ++ " ".join([Text(u) for u in text.utf16()]) ++ ")" else "")
+            "UTF8": (if text := self.text then " ".join([b.hex() for b in text.utf8()]) else "")
             "Name": self.name,
             "Unicode 1 name": self.unicode_1_name or "",
             "Category": self.category,
@@ -235,6 +238,8 @@ struct Unitable(
                 self.message = "Copied $(codepoint.codepoint)!"
             else
                 self.message = "Failed to copy to clipboard!"
+        is "i"
+            self.show_info = not self.show_info
         is "/", "Ctrl-f"
             self.search = ""
             self.search_start = self._cursor
@@ -261,7 +266,7 @@ struct Unitable(
 
     func update_search(self:&Unitable)
         key := get_key()
-        search := self.search!
+        search := self.search or ""
         when key
         is "Escape", "Ctrl-c"
             self.search = none
@@ -281,10 +286,10 @@ struct Unitable(
         search = search.lower()
         self.search = search
 
-        search_start := self.search_start!
+        search_start := self.search_start or 1
         for offset in (0).to(self.entries.length-1)
             index := (search_start + offset) mod1 self.entries.length
-            line := self.entries[index]!
+            line := self.entries[index] or skip
             if line.lower().has(search)
                 self.set_cursor(index)
                 stop
