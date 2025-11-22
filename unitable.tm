@@ -34,11 +34,29 @@ struct Codepoint(
         codepoint.numeric = Int.parse(items[9]!, &junk)
         codepoint.mirrored = items[10] == "Y"
         codepoint.unicode_1_name = items[11]
-        codepoint.iso_comment = items[11]
-        codepoint.simple_uppercase = Int32.parse(items[12]!, &junk)
-        codepoint.simple_lowercase = Int32.parse(items[13]!, &junk)
-        codepoint.simple_titlecase = Int32.parse(items[14]!, &junk)
+        codepoint.iso_comment = items[12]
+        codepoint.simple_uppercase = Int32.parse(items[13]!, &junk)
+        codepoint.simple_lowercase = Int32.parse(items[14]!, &junk)
+        codepoint.simple_titlecase = Int32.parse(items[15]!, &junk)
         return codepoint
+
+    func info(self:Codepoint -> {Text:Text})
+        return {
+            "Symbol": (if self.codepoint > 32 then self.text or "" else ""),
+            "Codepoint": "U+$(self.codepoint.hex()) ($(self.codepoint))",
+            "Name": self.name,
+            "Unicode 1 name": self.unicode_1_name or "",
+            "Category": self.category,
+            "Combining class": self.combining_class,
+            "Bidi class": self.bidi_class,
+            "Decomposition": self.decomposition_mapping,
+            "Digit": (if d := self.digit then Text(d) else ""),
+            "Mirrored": Text(self.mirrored),
+            "ISO comment": self.iso_comment or "",
+            "Uppercase": (if u := self.simple_uppercase then Text.from_utf32([u])! else ""),
+            "Lowercase": (if l := self.simple_lowercase then Text.from_utf32([l])! else ""),
+            "Titlecase": (if t := self.simple_titlecase then Text.from_utf32([t])! else ""),
+        }
 
     func draw(self:Codepoint, y:Int, highlighted=no)
         columns := [
@@ -90,6 +108,7 @@ struct Unitable(
     _top:Int=1,
     _cursor:Int=1,
     quit:Bool=no,
+    show_info:Bool=yes,
     search_start:Int?=none,
     search:Text?=none,
     message:Text?=none,
@@ -106,6 +125,26 @@ struct Unitable(
             codepoint := Codepoint.parse(self.entries[row]!)
             codepoint.draw(y, highlighted=(row == self._cursor))
 
+        if self.show_info
+            codepoint := Codepoint.parse(self.entries[self._cursor]!)
+            info := codepoint.info()
+            height := info.length + 2
+            label_width := (_max_: k.width() for k in info.keys)!
+            value_width := (_max_: v.width() for v in info.values)! _max_ 30
+            width := label_width + 3 + value_width
+            top_left := ScreenVec2(size.x - width - 1, 2)
+            box_color := Color.Color256(214)
+            style(bg=Black, fg=box_color)
+            draw_shadow(top_left, ScreenVec2(width, height))
+            style(bg=box_color, fg=box_color)
+            fill_box(top_left, ScreenVec2(width, height))
+            style(fg=Color256(94))
+            for i,label in info.keys
+                write(label, pos=top_left + ScreenVec2(label_width + 1, i), Right)
+            style(fg=Black)
+            for i,value in info.values
+                write(value, pos=top_left + ScreenVec2(label_width + 2, i), Left)
+
         if search := self.search
             style(bg=Red, fg=Black)
             write(" Search: ", ScreenVec2(0, size.y-1))
@@ -121,6 +160,8 @@ struct Unitable(
             style(bg=Color256(252), fg=Color256(232), bold=yes)
             write(" $message ", ScreenVec2(size.x-1, size.y-1), Right)
             clear(Right)
+
+        flush()
 
     func update(self:&Unitable)
         if self.search_start
