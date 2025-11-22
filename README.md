@@ -16,6 +16,9 @@ Ctrl+f or /    - Search for text (enter to confirm)
 n/N            - Jump to next/previous search result
 ```
 
+This project uses [bruce-hill/tomo-btui](https://github.com/bruce-hill/tomo-btui)
+for the terminal user interface.
+
 ## Installation
 
 ```
