@@ -19,7 +19,7 @@ _HELP := "
 
 "
 
-struct Codepoint(
+struct UnicodeEntry(
     codepoint:Int32,
     text:Text?=none,
     name:Text="",
@@ -37,29 +37,29 @@ struct Codepoint(
     simple_lowercase:Int32?=none,
     simple_titlecase:Int32?=none,
 )
-    func parse(text:Text -> Codepoint?)
+    func parse(text:Text -> UnicodeEntry?)
         # For format details, see: https://www.unicode.org/L2/L1999/UnicodeData.html
         items := text.split(";")
-        codepoint := Codepoint(Int32.parse("0x"++(items[1] or return none)) or return none)
-        codepoint.text = Text.from_utf32([codepoint.codepoint])
-        codepoint.name = items[2] or return none
-        codepoint.category = items[3] or return none
-        codepoint.combining_class = items[4] or return none
-        codepoint.bidi_class = items[5] or return none
-        codepoint.decomposition_mapping = items[6] or return none
+        entry := UnicodeEntry(Int32.parse("0x"++(items[1] or return none)) or return none)
+        entry.text = Text.from_utf32([entry.codepoint])
+        entry.name = items[2] or return none
+        entry.category = items[3] or return none
+        entry.combining_class = items[4] or return none
+        entry.bidi_class = items[5] or return none
+        entry.decomposition_mapping = items[6] or return none
         junk : Text
-        codepoint.decimal_digit = Int.parse(items[7] or return none, &junk)
-        codepoint.digit = Int.parse(items[8] or return none, &junk)
-        codepoint.numeric = Int.parse(items[9] or return none, &junk)
-        codepoint.mirrored = items[10] == "Y"
-        codepoint.unicode_1_name = items[11]
-        codepoint.iso_comment = items[12]
-        codepoint.simple_uppercase = Int32.parse("0x"++(items[13] or return none), &junk)
-        codepoint.simple_lowercase = Int32.parse("0x"++(items[14] or return none), &junk)
-        codepoint.simple_titlecase = Int32.parse("0x"++(items[15] or return none), &junk)
-        return codepoint
+        entry.decimal_digit = Int.parse(items[7] or return none, &junk)
+        entry.digit = Int.parse(items[8] or return none, &junk)
+        entry.numeric = Int.parse(items[9] or return none, &junk)
+        entry.mirrored = items[10] == "Y"
+        entry.unicode_1_name = items[11]
+        entry.iso_comment = items[12]
+        entry.simple_uppercase = Int32.parse("0x"++(items[13] or return none), &junk)
+        entry.simple_lowercase = Int32.parse("0x"++(items[14] or return none), &junk)
+        entry.simple_titlecase = Int32.parse("0x"++(items[15] or return none), &junk)
+        return entry
 
-    func info(self:Codepoint -> {Text:Text})
+    func info(self:UnicodeEntry -> {Text:Text})
         return {
             "Symbol": (if self.codepoint > 32 then self.text or "" else ""),
             "UTF32": "$(self.codepoint.hex()) ($(self.codepoint))",
@@ -79,7 +79,7 @@ struct Codepoint(
             "Titlecase": (if t := self.simple_titlecase then Text.from_utf32([t])! else ""),
         }
 
-    func draw(self:Codepoint, y:Int, highlighted=no)
+    func draw(self:UnicodeEntry, y:Int, highlighted=no)
         columns := [
             " U+$(self.codepoint.hex(digits=5, prefix=no))",
 
@@ -124,7 +124,7 @@ struct Codepoint(
             clear(Right)
             x += widths[i]!
 
-struct Unitable(
+struct TableViewer(
     entries:[Text],
     _top:Int=1,
     _cursor:Int=1,
@@ -134,7 +134,7 @@ struct Unitable(
     search:Text?=none,
     message:Text?=none,
 )
-    func draw(self:Unitable)
+    func draw(self:TableViewer)
         size := get_size()
         style(fg=Black, bg=Blue)
         write(" Codepoint Symbol Description ", ScreenVec2(0,0))
@@ -142,12 +142,12 @@ struct Unitable(
 
         for y in (1).to(size.y - 1)
             row := self._top + y - 1
-            codepoint := self.get_codepoint(row) or skip
-            codepoint.draw(y, highlighted=(row == self._cursor))
+            entry := self.get_entry(row) or skip
+            entry.draw(y, highlighted=(row == self._cursor))
 
         if self.show_info
-            if codepoint := self.get_codepoint()
-                info := codepoint.info()
+            if entry := self.get_entry()
+                info := entry.info()
                 height := info.length + 2
                 label_width := (_max_: k.width() for k in info.keys)!
                 value_width := (_max_: v.width() for v in info.values)! _max_ 50
@@ -191,7 +191,7 @@ struct Unitable(
 
         flush()
 
-    func update(self:&Unitable)
+    func update(self:&TableViewer)
         if self.search_start
             self.update_search()
             return
@@ -232,22 +232,22 @@ struct Unitable(
         is "Ctrl-u"
             self.move_scroll(-size.y/2)
         is "Ctrl-c", "y"
-            if codepoint := self.get_codepoint()
-                if text := codepoint.text
+            if entry := self.get_entry()
+                if text := entry.text
                     if copy_to_clipboard(text)
                         self.message = "Copied text!"
                     else
                         self.message = "Failed to copy to clipboard!"
         is "u"
-            if codepoint := self.get_codepoint()
-                if copy_to_clipboard("U+$(codepoint.codepoint.hex())")
-                    self.message = "Copied U+$(codepoint.codepoint.hex())!"
+            if entry := self.get_entry()
+                if copy_to_clipboard("U+$(entry.codepoint.hex())")
+                    self.message = "Copied U+$(entry.codepoint.hex())!"
                 else
                     self.message = "Failed to copy to clipboard!"
         is "d"
-            if codepoint := self.get_codepoint()
-                if copy_to_clipboard("$(codepoint.codepoint)")
-                    self.message = "Copied $(codepoint.codepoint)!"
+            if entry := self.get_entry()
+                if copy_to_clipboard("$(entry.codepoint)")
+                    self.message = "Copied $(entry.codepoint)!"
                 else
                     self.message = "Failed to copy to clipboard!"
         is "i"
@@ -273,10 +273,10 @@ struct Unitable(
                         self.set_cursor(index)
                         stop
 
-    func get_codepoint(self:Unitable, row:Int?=none -> Codepoint?)
-        return Codepoint.parse(self.entries[row or self._cursor] or return none)
+    func get_entry(self:TableViewer, row:Int?=none -> UnicodeEntry?)
+        return UnicodeEntry.parse(self.entries[row or self._cursor] or return none)
 
-    func update_search(self:&Unitable)
+    func update_search(self:&TableViewer)
         key := get_key()
         search := self.search or ""
         when key
@@ -306,16 +306,16 @@ struct Unitable(
                 self.set_cursor(index)
                 stop
 
-    func move_cursor(self:&Unitable, delta:Int)
+    func move_cursor(self:&TableViewer, delta:Int)
         self.set_cursor(self._cursor + delta)
 
-    func set_cursor(self:&Unitable, pos:Int)
+    func set_cursor(self:&TableViewer, pos:Int)
         size := get_size()
         self._cursor = Int.clamped(pos, 1, self.entries.length)
         table_height := size.y - 2
         self._top = Int.clamped(Int.clamped(self._top, self._cursor - table_height + 5, self._cursor + - 5), 1, self.entries.length - table_height)
 
-    func move_scroll(self:&Unitable, delta:Int)
+    func move_scroll(self:&TableViewer, delta:Int)
         size := get_size()
         self._top = Int.clamped(self._top + delta, 1, self.entries.length)
         table_height := size.y - 2
@@ -359,15 +359,15 @@ func main(unicode_data:Path?=none)
     else
         C_code:Text`Text$from_str(unicode_table)`.lines()
 
-    table := Unitable(table_lines)
+    viewer := TableViewer(table_lines)
 
     set_mode(TUI)
     hide_cursor()
-    table.draw()
-    while not table.quit
-        prev := table
-        table.update()
-        if table != prev
-            table.draw()
+    viewer.draw()
+    while not viewer.quit
+        prev := viewer
+        viewer.update()
+        if viewer != prev
+            viewer.draw()
 
     disable()
