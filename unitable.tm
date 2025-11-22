@@ -47,6 +47,37 @@ struct Codepoint(
         codepoint.simple_titlecase = Int32.parse(items[14]!, &junk)
         return codepoint
 
+    func draw(self:Codepoint, y:Int, highlighted=no)
+        if highlighted
+            style(reverse=yes)
+
+        style(fg=Black, bg=Yellow)
+        write(" U+$(self.codepoint.hex(digits=5, prefix=no))", ScreenVec2(0, y))
+        clear(Right)
+
+        if text := self.text
+            style(fg=White, bg=Normal, bold=yes)
+            if self.codepoint > 32
+                write(" $text          ", ScreenVec2(9, y))
+            else
+                write("           ", ScreenVec2(9, y))
+            clear(Right)
+            if name := self.name
+                style(fg=Cyan, bg=Normal, bold=no)
+                if desc := self.unicode_1_name
+                    name ++= " "++desc
+                name = name.title()
+                write(" $name", ScreenVec2(14, y))
+                clear(Right)
+            else
+                style(fg=Red, bg=Normal, bold=yes)
+                write(" No name", ScreenVec2(14, y))
+                clear(Right)
+
+        if highlighted
+            style(reverse=no)
+
+
 func cleanup_fail(msg:Text->Abort)
     disable()
     fail(msg)
@@ -70,33 +101,7 @@ struct Unitable(
         for y in (1).to(size.y - 2)
             row := self._top + y - 1
             codepoint := Codepoint.parse(self.entries[row]!)
-            if row == self._cursor
-                style(reverse=yes)
-
-            style(fg=Black, bg=Yellow)
-            write(" U+$(codepoint.codepoint.hex(digits=5, prefix=no))", ScreenVec2(0, y))
-            clear(Right)
-
-            if text := codepoint.text
-                style(fg=White, bg=Normal, bold=yes)
-                if codepoint.codepoint > 32
-                    write(" $text          ", ScreenVec2(9, y))
-                else
-                    write("           ", ScreenVec2(9, y))
-                clear(Right)
-                if name := codepoint.name
-                    style(fg=Cyan, bg=Normal, bold=no)
-                    if desc := codepoint.unicode_1_name
-                        name ++= " "++desc
-                    name = name.title()
-                    write(" $name", ScreenVec2(14, y))
-                    clear(Right)
-                else
-                    style(fg=Red, bg=Normal, bold=yes)
-                    write(" No name", ScreenVec2(14, y))
-                    clear(Right)
-            if row == self._cursor
-                style(reverse=no)
+            codepoint.draw(y, highlighted=(row == self._cursor))
 
         if search := self.search
             style(bg=Red, fg=Black)
