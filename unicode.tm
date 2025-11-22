@@ -1,6 +1,23 @@
 use ../tomo-btui/btui.tm
 use <sys/wait.h>
 
+_HELP := "
+    `unicode` is a program to view information about the Unicode 3.1 standard
+    codepoints. The table viewer is an interactive text user interface with the
+    following controls:
+
+        q              - Quit the program
+        j/k or up/down - Move up or down one entry
+        Ctrl+d/Ctrl+u  - Move up or down one page
+        g/G            - Move to top/bottom
+        Ctrl+c or y    - Copy the text of an entry to the clipboard
+        u              - Copy the codepoint of an entry (U+XXXX) to the clipboard
+        d              - Copy the decimal codepoint of an entry to the clipboard
+        Ctrl+f or /    - Search for text (enter to confirm)
+        n/N            - Jump to next/previous search result
+
+"
+
 struct Codepoint(
     codepoint:Int32,
     text:Text?=none,
@@ -121,11 +138,11 @@ struct Unitable(
 
         for y in (1).to(size.y - 1)
             row := self._top + y - 1
-            codepoint := Codepoint.parse(self.entries[row]!)
+            codepoint := self.get_codepoint(row)
             codepoint.draw(y, highlighted=(row == self._cursor))
 
         if self.show_info
-            codepoint := Codepoint.parse(self.entries[self._cursor]!)
+            codepoint := self.get_codepoint()
             info := codepoint.info()
             height := info.length + 2
             label_width := (_max_: k.width() for k in info.keys)!
@@ -200,31 +217,24 @@ struct Unitable(
         is "Ctrl-u"
             self.move_scroll(-get_size().y/2)
         is "Ctrl-c", "y"
-            if text := self.entries[self._cursor]!.text
-                success := no
-                C_code `
-                    int fds[2];
-                    pipe(fds);
-                    pid_t child = fork();
-                    if (child == 0) {
-                        close(fds[1]);
-                        dup2(fds[0], STDIN_FILENO);
-                        execlp("xclip", "xclip", "-selection", "clipboard", NULL);
-                        errx(1, "Could not exec!");
-                    }
-                    close(fds[0]);
-                    const char *str = @(text.as_c_string());
-                    write(fds[1], str, strlen(str));
-                    close(fds[1]);
-                    int status;
-                    waitpid(child, &status, 0);
-                    @success = (WIFEXITED(status) && WEXITSTATUS(status) == 0);
-                `
-                if success
-                    self.message = "Copied!"
+            if text := self.get_codepoint().text
+                if copy_to_clipboard(text)
+                    self.message = "Copied text!"
                 else
                     self.message = "Failed to copy to clipboard!"
-        is "/"
+        is "u"
+            codepoint := self.get_codepoint()
+            if copy_to_clipboard("U+$(codepoint.codepoint.hex())")
+                self.message = "Copied U+$(codepoint.codepoint.hex())!"
+            else
+                self.message = "Failed to copy to clipboard!"
+        is "d"
+            codepoint := self.get_codepoint()
+            if copy_to_clipboard("$(codepoint.codepoint)")
+                self.message = "Copied $(codepoint.codepoint)!"
+            else
+                self.message = "Failed to copy to clipboard!"
+        is "/", "Ctrl-f"
             self.search = ""
             self.search_start = self._cursor
             self.message = none
@@ -244,6 +254,9 @@ struct Unitable(
                     if line.lower().has(search)
                         self.set_cursor(index)
                         stop
+
+    func get_codepoint(self:Unitable, row:Int?=none -> Codepoint)
+        return Codepoint.parse(self.entries[row or self._cursor]!)
 
     func update_search(self:&Unitable)
         key := get_key()
@@ -288,6 +301,32 @@ struct Unitable(
         self._top = Int.clamped(self._top + delta, 1, self.entries.length)
         table_height := size.y - 2
         self._cursor = Int.clamped(self._cursor, self._top + 5, self._top + table_height - 5)
+
+func copy_to_clipboard(text:Text -> Bool)
+    success := no
+    C_code `
+        int fds[2];
+        pipe(fds);
+        pid_t child = fork();
+        if (child == 0) {
+            close(fds[1]);
+            dup2(fds[0], STDIN_FILENO);
+        #ifdef __APPLE__
+            execlp("pbcopy", "pbcopy", NULL);
+        #else
+            execlp("xclip", "xclip", "-selection", "clipboard", NULL);
+        #endif
+            errx(1, "Could not exec!");
+        }
+        close(fds[0]);
+        const char *str = @(text.as_c_string());
+        write(fds[1], str, strlen(str));
+        close(fds[1]);
+        int status;
+        waitpid(child, &status, 0);
+        @success = (WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    `
+    return success
 
 func main(unicode_data:Path?=none)
     C_code `
