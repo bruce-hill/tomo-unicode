@@ -37,6 +37,7 @@ struct Codepoint(
     simple_titlecase:Int32?=none,
 )
     func parse(text:Text -> Codepoint)
+        # For format details, see: https://www.unicode.org/L2/L1999/UnicodeData.html
         items := text.split(";")
         codepoint := Codepoint(Int32.parse("0x"++items[1]!)!)
         codepoint.text = Text.from_utf32([codepoint.codepoint])
