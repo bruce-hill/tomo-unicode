@@ -1,13 +1,6 @@
 use ../tomo-btui/btui.tm
 use <sys/wait.h>
 
-struct ColumnWidths(
-    codepoint=8,
-    text=6,
-    name=32,
-    description=32,
-)
-
 struct Codepoint(
     codepoint:Int32,
     text:Text?=none,
@@ -48,35 +41,49 @@ struct Codepoint(
         return codepoint
 
     func draw(self:Codepoint, y:Int, highlighted=no)
-        if highlighted
-            style(reverse=yes)
+        columns := [
+            " U+$(self.codepoint.hex(digits=5, prefix=no))",
 
-        style(fg=Black, bg=Yellow)
-        write(" U+$(self.codepoint.hex(digits=5, prefix=no))", ScreenVec2(0, y))
-        clear(Right)
+            (
+                if text := self.text
+                    if self.codepoint > 32
+                        text
+                    else
+                        ""
+                else
+                    ""
+            )
 
-        if text := self.text
-            style(fg=White, bg=Normal, bold=yes)
-            if self.codepoint > 32
-                write(" $text          ", ScreenVec2(9, y))
-            else
-                write("           ", ScreenVec2(9, y))
+            (
+                do
+                    name := if self.name then self.name else "No name"
+                    if desc := self.unicode_1_name
+                        name ++= " "++desc
+                    name.title()
+            ),
+        ]
+
+        styles := if highlighted
+            [
+                func() style(fg=Yellow, bg=Color256(239))
+                func() style(fg=White, bg=Color256(239), bold=yes)
+                func() style(fg=Cyan, bg=Color256(239), bold=yes)
+            ]
+        else
+            [
+                func() style(fg=Yellow, bg=Color256(235))
+                func() style(fg=White, bg=Color256(235), bold=yes)
+                func() style(fg=Cyan, bg=Color256(235), bold=yes)
+            ]
+
+        widths := [10, 6, 32]
+
+        x := 0
+        for i,column in columns
+            styles[i]!()
+            write(" $column ", ScreenVec2(x, y))
             clear(Right)
-            if name := self.name
-                style(fg=Cyan, bg=Normal, bold=no)
-                if desc := self.unicode_1_name
-                    name ++= " "++desc
-                name = name.title()
-                write(" $name", ScreenVec2(14, y))
-                clear(Right)
-            else
-                style(fg=Red, bg=Normal, bold=yes)
-                write(" No name", ScreenVec2(14, y))
-                clear(Right)
-
-        if highlighted
-            style(reverse=no)
-
+            x += widths[i]!
 
 func cleanup_fail(msg:Text->Abort)
     disable()
@@ -95,7 +102,7 @@ struct Unitable(
         clear()
         size := get_size()
         style(fg=Black, bg=Blue)
-        write(" Unicode Table ", ScreenVec2(0,0))
+        write(" Codepoint Symbol Description ", ScreenVec2(0,0))
         clear(Right)
 
         for y in (1).to(size.y - 2)
@@ -106,8 +113,12 @@ struct Unitable(
         if search := self.search
             style(bg=Red, fg=Black)
             write(" Search: ", ScreenVec2(0, size.y-1))
-            style(bg=Normal, fg=White, bold=yes)
+            style(bg=Color256(235), fg=White, bold=yes)
             write(" "++search)
+            clear(Right)
+        else
+            style(bg=Color256(235), fg=White, bold=yes)
+            move_cursor(ScreenVec2(0, size.y-1))
             clear(Right)
 
         if message := self.message
@@ -135,6 +146,11 @@ struct Unitable(
             self.move_cursor(self.entries.length)
         else if key == "q"
             self.quit = yes
+        else if key == "Escape"
+            if self.search != none
+                self.search = none
+            else
+                self.quit = yes
         else if key == "Ctrl-d"
             self.move_scroll(get_size().y/2)
         else if key == "Ctrl-u"
