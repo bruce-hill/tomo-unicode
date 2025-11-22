@@ -2,7 +2,7 @@ use ../tomo-btui/btui.tm
 use <sys/wait.h>
 
 _HELP := "
-    `unicode` is a program to view information about the Unicode 3.1 standard
+    `unicode` is a Tomo program to view information about the Unicode 3.1 standard
     codepoints. The table viewer is an interactive text user interface with the
     following controls:
 
