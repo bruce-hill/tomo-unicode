@@ -15,3 +15,9 @@ d              - Copy the decimal codepoint of an entry to the clipboard
 Ctrl+f or /    - Search for text (enter to confirm)
 n/N            - Jump to next/previous search result
 ```
+
+## Installation
+
+```
+tomo -Ie unicode.tm
+```
