@@ -1,4 +1,4 @@
-use ../tomo-btui/btui.tm
+use btui
 use <sys/wait.h>
 
 _HELP := "
