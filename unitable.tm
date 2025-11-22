@@ -119,7 +119,7 @@ struct Unitable(
         write(" Codepoint Symbol Description ", ScreenVec2(0,0))
         clear(Right)
 
-        for y in (1).to(size.y - 2)
+        for y in (1).to(size.y - 1)
             row := self._top + y - 1
             codepoint := Codepoint.parse(self.entries[row]!)
             codepoint.draw(y, highlighted=(row == self._cursor))
@@ -129,14 +129,13 @@ struct Unitable(
             info := codepoint.info()
             height := info.length + 2
             label_width := (_max_: k.width() for k in info.keys)!
-            value_width := (_max_: v.width() for v in info.values)! _max_ 40
+            value_width := (_max_: v.width() for v in info.values)! _max_ 50
             width := label_width + 3 + value_width
-            top_left := ScreenVec2(size.x - width - 2, 3)
-            box_color := Color.Color256(214)
+            top_left := ScreenVec2(size.x - width - 1, 1)
+            box_color := Color.Color256(222)
             style(bg=box_color, fg=box_color)
             fill_box(top_left, ScreenVec2(width, height))
             style(fg=Color256(94))
-            draw_linebox(top_left, ScreenVec2(width, height))
             for i,label in info.keys
                 write(label, pos=top_left + ScreenVec2(label_width + 1, i), Right)
             style(fg=Black)
@@ -149,10 +148,6 @@ struct Unitable(
             style(bg=Color256(235), fg=White, bold=yes)
             write(" "++search)
             clear(Right)
-        else
-            style(bg=Color256(235), fg=White, bold=yes)
-            move_cursor(ScreenVec2(0, size.y-1))
-            clear(Right)
 
         if message := self.message
             style(bg=Color256(252), fg=Color256(232), bold=yes)
@@ -164,14 +159,14 @@ struct Unitable(
         scroll_top := 1 + (self._top * scroll_height)/self.entries.length
         scroll_bottom := 1 + ((self._top + scroll_height - 1) * scroll_height)/self.entries.length
         style(bg=Color256(237))
-        for y in (2).to(scroll_top-1, step=1)
-            write("  ", ScreenVec2(size.x-2, y))
+        for y in (1).to(scroll_top-1, step=1)
+            write(" ", ScreenVec2(size.x-1, y))
         style(bg=Color256(247))
         for y in (scroll_top).to(scroll_bottom, step=1)
-            write("  ", ScreenVec2(size.x-2, y))
+            write(" ", ScreenVec2(size.x-1, y))
         style(bg=Color256(237))
-        for y in (scroll_bottom+1).to(size.y-2, step=1)
-            write("  ", ScreenVec2(size.x-2, y))
+        for y in (scroll_bottom+1).to(size.y-1, step=1)
+            write(" ", ScreenVec2(size.x-1, y))
 
         flush()
 
