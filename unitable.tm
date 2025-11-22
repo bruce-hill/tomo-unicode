@@ -223,15 +223,20 @@ struct Unitable(
         table_height := size.y - 2
         self._cursor = Int.clamped(self._cursor, self._top + 5, self._top + table_height - 5)
 
-func main()
+func main(unicode_data:Path?=none)
     C_code `
         static const char unicode_table[] = {
             #embed "../UnicodeData.txt"
             ,0,
         };
     `
-    table_lines := C_code:Text`Text$from_str(unicode_table)`.lines()
+    table_lines := if file := unicode_data
+        file.lines()!
+    else
+        C_code:Text`Text$from_str(unicode_table)`.lines()
+
     table := Unitable(table_lines)
+
     set_mode(TUI)
     hide_cursor()
     table.draw()
