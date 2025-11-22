@@ -85,10 +85,6 @@ struct Codepoint(
             clear(Right)
             x += widths[i]!
 
-func cleanup_fail(msg:Text->Abort)
-    disable()
-    fail(msg)
-
 struct Unitable(
     entries:[Text],
     _top:Int=1,
@@ -122,7 +118,7 @@ struct Unitable(
             clear(Right)
 
         if message := self.message
-            style(bg=Normal, fg=White, bold=yes)
+            style(bg=Color256(252), fg=Color256(232), bold=yes)
             write(" $message ", ScreenVec2(size.x-1, size.y-1), Right)
             clear(Right)
 
@@ -131,31 +127,31 @@ struct Unitable(
             self.update_search()
             return
 
-        key := get_key()
-        if key == "j"
+        when get_key()
+        is "j"
             self.move_cursor(1)
-        else if key == "Mouse wheel down"
+        is "Mouse wheel down"
             self.move_scroll(1)
-        else if key == "k"
+        is "k"
             self.move_cursor(-1)
-        else if key == "Mouse wheel up"
+        is "Mouse wheel up"
             self.move_scroll(-1)
-        else if key == "g"
+        is "g"
             self.move_cursor(-self.entries.length)
-        else if key == "G"
+        is "G"
             self.move_cursor(self.entries.length)
-        else if key == "q"
+        is "q"
             self.quit = yes
-        else if key == "Escape"
+        is "Escape"
             if self.search != none
                 self.search = none
             else
                 self.quit = yes
-        else if key == "Ctrl-d"
+        is "Ctrl-d"
             self.move_scroll(get_size().y/2)
-        else if key == "Ctrl-u"
+        is "Ctrl-u"
             self.move_scroll(-get_size().y/2)
-        else if key == "Ctrl-c"
+        is "Ctrl-c", "y"
             if text := self.entries[self._cursor]!.text
                 success := no
                 C_code `
@@ -180,11 +176,11 @@ struct Unitable(
                     self.message = "Copied!"
                 else
                     self.message = "Failed to copy to clipboard!"
-        else if key == "/"
+        is "/"
             self.search = ""
             self.search_start = self._cursor
             self.message = none
-        else if key == "n"
+        is "n"
             if search := self.search
                 for offset in (0).to(self.entries.length-1)
                     index := (self._cursor + 1 + offset) mod1 self.entries.length
@@ -192,7 +188,7 @@ struct Unitable(
                     if line.lower().has(search)
                         self.set_cursor(index)
                         stop
-        else if key == "N"
+        is "N"
             if search := self.search
                 for offset in (self.entries.length-1).to(0)
                     index := (self._cursor - 1 + offset) mod1 self.entries.length
