@@ -60,9 +60,6 @@ struct Unitable(
     search:Text?=none,
     message:Text?=none,
 )
-    func load(table:Path=(./UnicodeData.txt) -> Unitable)
-        return Unitable(entries=table.lines()!)
-
     func draw(self:Unitable)
         clear()
         size := get_size()
@@ -227,7 +224,14 @@ struct Unitable(
         self._cursor = Int.clamped(self._cursor, self._top + 5, self._top + table_height - 5)
 
 func main()
-    table := Unitable.load()
+    C_code `
+        static const char unicode_table[] = {
+            #embed "../UnicodeData.txt"
+            ,0,
+        };
+    `
+    table_lines := C_code:Text`Text$from_str(unicode_table)`.lines()
+    table := Unitable(table_lines)
     set_mode(TUI)
     hide_cursor()
     table.draw()
