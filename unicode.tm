@@ -196,7 +196,10 @@ struct Unitable(
             self.update_search()
             return
 
-        when get_key()
+        size := get_size()
+        mouse_pos := ScreenVec2(0, 0)
+        key := get_key(&mouse_pos)
+        when key
         is "j"
             self.move_cursor(1)
         is "Mouse wheel down"
@@ -205,6 +208,17 @@ struct Unitable(
             self.move_cursor(-1)
         is "Mouse wheel up"
             self.move_scroll(-1)
+        is "Left press", "Left drag"
+            if 1 <= mouse_pos.y and mouse_pos.y <= size.y-2
+                if mouse_pos.x >= size.x-1
+                    self.set_cursor((self.entries.length * (mouse_pos.y - 1)) / (size.y - 2))
+                    # Prevent spamming the console too much
+                    sleep(0.01)
+                else if key == "Left press"
+                    self.set_cursor(self._top + mouse_pos.y - 1)
+        is "Right drag", "Middle drag"
+            # Prevent spamming the console too much
+            sleep(0.01)
         is "g"
             self.move_cursor(-self.entries.length)
         is "G"
@@ -217,9 +231,9 @@ struct Unitable(
             else
                 self.quit = yes
         is "Ctrl-d"
-            self.move_scroll(get_size().y/2)
+            self.move_scroll(size.y/2)
         is "Ctrl-u"
-            self.move_scroll(-get_size().y/2)
+            self.move_scroll(-size.y/2)
         is "Ctrl-c", "y"
             if codepoint := self.get_codepoint()
                 if text := codepoint.text
@@ -261,6 +275,9 @@ struct Unitable(
                     if line.lower().has(search)
                         self.set_cursor(index)
                         stop
+        else
+            self.update()
+            return
 
     func get_codepoint(self:Unitable, row:Int?=none -> Codepoint?)
         return Codepoint.parse(self.entries[row or self._cursor] or return none)
@@ -283,6 +300,9 @@ struct Unitable(
             search = search.to(-2)
         else if key.length == 1
             search = search ++ key
+        else
+            self.update_search()
+            return
 
         search = search.lower()
         self.search = search
