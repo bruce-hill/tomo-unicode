@@ -88,6 +88,7 @@ struct Unitable(
                     style(fg=Cyan, bg=Normal, bold=no)
                     if desc := codepoint.unicode_1_name
                         name ++= " "++desc
+                    name = name.title()
                     write(" $name", ScreenVec2(14, y))
                     clear(Right)
                 else
