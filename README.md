@@ -19,5 +19,11 @@ n/N            - Jump to next/previous search result
 ## Installation
 
 ```
+make install
+```
+
+Or:
+
+```
 tomo -Ie unicode.tm
 ```
