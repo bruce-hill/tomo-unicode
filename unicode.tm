@@ -53,9 +53,9 @@ struct Codepoint(
         codepoint.mirrored = items[10] == "Y"
         codepoint.unicode_1_name = items[11]
         codepoint.iso_comment = items[12]
-        codepoint.simple_uppercase = Int32.parse(items[13]!, &junk)
-        codepoint.simple_lowercase = Int32.parse(items[14]!, &junk)
-        codepoint.simple_titlecase = Int32.parse(items[15]!, &junk)
+        codepoint.simple_uppercase = Int32.parse("0x"++items[13]!, &junk)
+        codepoint.simple_lowercase = Int32.parse("0x"++items[14]!, &junk)
+        codepoint.simple_titlecase = Int32.parse("0x"++items[15]!, &junk)
         return codepoint
 
     func info(self:Codepoint -> {Text:Text})
@@ -161,9 +161,9 @@ struct Unitable(
                 write(value, pos=top_left + ScreenVec2(label_width + 2, i), Left)
 
         if search := self.search
-            style(bg=Red, fg=Black)
+            style(bg=Color256((if self.search_start then Byte(69) else Byte(27))), fg=Color(232))
             write(" Search: ", ScreenVec2(0, size.y-1))
-            style(bg=Color256(235), fg=White, bold=yes)
+            style(bg=Color256(235), fg=Color256((if self.search_start then Byte(255) else Byte(242))), bold=yes)
             write(" "++search)
             clear(Right)
 
@@ -262,17 +262,18 @@ struct Unitable(
     func update_search(self:&Unitable)
         key := get_key()
         search := self.search!
-        if key == "Escape" or key == "Ctrl-c"
+        when key
+        is "Escape", "Ctrl-c"
             self.search = none
             self.search_start = none
             return
-        else if key == "Enter"
+        is "Enter"
             # keep self.search so we can use 'n' to find it later
             self.search_start = none
             return
-        else if key == "Space"
+        is "Space"
             search = search ++ " "
-        else if key == "Backspace"
+        is "Backspace"
             search = search.to(-2)
         else if key.length == 1
             search = search ++ key
