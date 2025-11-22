@@ -109,7 +109,7 @@ struct Unitable(
 
         if message := self.message
             style(bg=Normal, fg=White, bold=yes)
-            write(" $message ", ScreenVec2(0, size.y-1))
+            write(" $message ", ScreenVec2(size.x-1, size.y-1), Right)
             clear(Right)
 
     func update(self:&Unitable)
@@ -164,6 +164,7 @@ struct Unitable(
         else if key == "/"
             self.search = ""
             self.search_start = self._cursor
+            self.message = none
         else if key == "n"
             if search := self.search
                 for offset in (0).to(self.entries.length-1)
