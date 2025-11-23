@@ -1,5 +1,7 @@
+# A unicode table viewer TUI
 use btui
 use <sys/wait.h>
+use ./names.tm
 
 _HELP := "
     `unicode` is a Tomo program to view information about the Unicode 3.1 standard
@@ -18,64 +20,6 @@ _HELP := "
         i              - Toggle info panel
 
 "
-
-CATEGORY_NAMES := {
-    "Cc": "Control",
-    "Cf": "Format",
-    "Co": "Private Use",
-    "Cs": "Surrrogate",
-    "Ll": "Lowercase Letter",
-    "Lm": "Modifier Letter",
-    "Lo": "Other Letter",
-    "Lt": "Titlecase Letter",
-    "Lu": "Uppercase Letter",
-    "Mc": "Spacing Mark",
-    "Me": "Enclosing Mark",
-    "Mn": "Nonspacing Mark",
-    "Nd": "Decimal Number",
-    "Nl": "Letter Number",
-    "No": "Other Number",
-    "Pc": "Connector Punctuation",
-    "Pd": "Dash Punctuation",
-    "Pe": "Close Punctuation",
-    "Pf": "Final Punctuation",
-    "Pi": "Initial Punctuation",
-    "Po": "Other Punctuation",
-    "Ps": "Open Punctuation",
-    "Sc": "Currency Symbol",
-    "Sk": "Modifier Symbol",
-    "Sm": "Math Symbol",
-    "So": "Other Symbol",
-    "Zl": "Line Separator",
-    "Zp": "Paragraph Separator",
-    "Zs": "Space Separator",
-}
-
-BIDI_NAMES := {
-    "AL": "Arabic Letter",
-    "AN": "Arabic Number",
-    "B": "Paragraph Separator",
-    "BN": "Boundary Neutral",
-    "CS": "Common Separator",
-    "EN": "European Number",
-    "ES": "European Separator",
-    "ET": "European Terminator",
-    "FSI": "First Strong Isolate",
-    "L": "Left To Right",
-    "LRE": "Left To Right Embedding",
-    "LRI": "Left To Right Isolate",
-    "LRO": "Left To Right Override",
-    "NSM": "Nonspacing Mark",
-    "ON": "Other Neutral",
-    "PDF": "Pop Directional Format",
-    "PDI": "Pop Directional Isolate",
-    "R": "Right To Left",
-    "RLE": "Right To Left Embedding",
-    "RLI": "Right To Left Isolate",
-    "RLO": "Right To Left Override",
-    "S": "Segment Separator",
-    "WS": "White Space",
-}
 
 struct UnicodeBlock(first,last:Int32, description:Text)
     UNICODE_BLOCKS : [UnicodeBlock] = UnicodeBlock.load_all()
@@ -146,6 +90,7 @@ struct UnicodeEntry(
 
     func info(self:UnicodeEntry -> {Text:Text})
         block := UnicodeBlock.find(self.codepoint)
+
         return {
             "Symbol": (if self.codepoint > 32 then self.text or "" else ""),
             "Block": (if b := block then b.description else ""),
@@ -154,10 +99,10 @@ struct UnicodeEntry(
             "UTF8": (if text := self.text then " ".join([b.hex() for b in text.utf8()]) else "")
             "Name": self.name,
             "Unicode 1 name": self.unicode_1_name or "",
-            "Category": (if cat := CATEGORY_NAMES[self.category] then "$cat ($(self.category))" else self.category),
-            "Combining class": self.combining_class,
-            "Bidi class": (if bidi_name := BIDI_NAMES[self.bidi_class] then "$bidi_name ($(self.bidi_class))" else self.bidi_class),
-            "Decomposition": self.decomposition_mapping,
+            "Category": named(self.category, CATEGORY_NAMES),
+            "Combining class": named(self.combining_class, COMBINING_NAMES),
+            "Bidi class": named(self.bidi_class, BIDI_NAMES),
+            "Decomposition": named(self.decomposition_mapping, DECOMPOSITION_NAMES),
             "Digit": (if d := self.digit then Text(d) else ""),
             "Mirrored": Text(self.mirrored),
             "ISO comment": self.iso_comment or "",
