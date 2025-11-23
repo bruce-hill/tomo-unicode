@@ -334,7 +334,13 @@ struct TableViewer(
         for offset in (0).to(self.entries.length-1)
             index := (search_start + offset) mod1 self.entries.length
             line := self.entries[index] or skip
-            if line.lower().has(search)
+            if search.length == 1
+                # Single letter searches should find exact match
+                if (self.get_entry(index) or skip).text == search
+                    self.set_cursor(index)
+                    stop
+            else if line.lower().has(search)
+                # Otherwise look for text match on the whole record
                 self.set_cursor(index)
                 stop
 
