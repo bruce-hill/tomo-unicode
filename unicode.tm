@@ -232,11 +232,11 @@ struct TableViewer(
         mouse_pos := ScreenVec2(0, 0)
         key := get_key(&mouse_pos)
         when key
-        is "j"
+        is "j", "Down"
             self.move_cursor(1)
         is "Mouse wheel down"
             self.move_scroll(1)
-        is "k"
+        is "k", "Up"
             self.move_cursor(-1)
         is "Mouse wheel up"
             self.move_scroll(-1)
@@ -379,7 +379,7 @@ func copy_to_clipboard(text:Text -> Bool)
     `
     return success
 
-func main()
+func main(codepoint|c:Int32?=none, text|t:Text?=none)
     C_code `
         static const char unicode_table[] = {
             #embed "../UnicodeData.txt"
@@ -388,10 +388,25 @@ func main()
     `
     table_lines := C_code:Text`Text$from_str(unicode_table)`.lines()
 
-    viewer := TableViewer(table_lines)
-
     set_mode(TUI)
     hide_cursor()
+
+    viewer := TableViewer(table_lines)
+
+    # Set cursor position according to CLI flags
+    if c := codepoint
+        start_text := c.hex(digits=4, prefix=no) ++ ";"
+        for i,line in viewer.entries
+            if line.starts_with(start_text)
+                viewer.set_cursor(i)
+                stop
+    else if t := text
+        for i,line in viewer.entries
+            entry := UnicodeEntry.parse(line) or skip
+            if t.starts_with(entry.text or skip)
+                viewer.set_cursor(i)
+                stop
+
     viewer.draw()
     while not viewer.quit
         prev := viewer
