@@ -34,11 +34,11 @@ struct UnicodeBlock(first,last:Int32, description:Text)
         blocks : &[UnicodeBlock] = &[]
         for line in C_code:Text`Text$from_str(unicode_blocks)`.lines()
             skip if line.length == 0 or line.starts_with("#")
-            chunks := line.split("..")
-            chunks2 := chunks[2]!.split("; ")
-            low := Int32.parse("0x"++chunks[1]!)!
-            high := Int32.parse("0x"++chunks2[1]!)!
-            block := UnicodeBlock(low, high, chunks2[2]!)
+            sections := line.split(";")
+            range := sections[1]!.split("..")
+            low := Int32.parse("0x"++range[1]!)!
+            high := Int32.parse("0x"++range[2]!)!
+            block := UnicodeBlock(low, high, sections[2]!.trim())
             blocks.insert(block)
         assert blocks.length > 0
         return blocks
