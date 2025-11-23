@@ -2,6 +2,7 @@
 use btui
 use <sys/wait.h>
 use ./names.tm
+use ./themes.tm
 
 _HELP := "
     `unicode` is a Tomo program to view information about the Unicode 3.1 standard
@@ -111,9 +112,11 @@ struct UnicodeEntry(
             "Titlecase": (if t := self.simple_titlecase then Text.from_utf32([t])! else ""),
         }
 
-    func draw(self:UnicodeEntry, y:Int, highlighted=no)
+    func draw(self:UnicodeEntry, y:Int, theme:Theme=Dark, highlighted=no)
         columns := [
-            " U+$(self.codepoint.hex(digits=5, prefix=no))",
+            "$(
+                if theme == Theme.None and highlighted then ">" else " "
+            )U+$(self.codepoint.hex(digits=5, prefix=no))",
 
             (
                 if text := self.text
@@ -134,18 +137,11 @@ struct UnicodeEntry(
             ),
         ]
 
-        styles := if highlighted
-            [
-                func() style(fg=Yellow, bg=Color256(239))
-                func() style(fg=White, bg=Color256(239), bold=yes)
-                func() style(fg=Cyan, bg=Color256(239), bold=yes)
-            ]
-        else
-            [
-                func() style(fg=Yellow, bg=Color256(235))
-                func() style(fg=White, bg=Color256(235), bold=yes)
-                func() style(fg=Cyan, bg=Color256(235), bold=yes)
-            ]
+        styles := [
+            func() theme.row_codepoint(highlighted)
+            func() theme.row_character(highlighted)
+            func() theme.row_description(highlighted)
+        ]
 
         widths := [10, 6, 32]
 
@@ -165,17 +161,18 @@ struct TableViewer(
     search_start:Int?=none,
     search:Text?=none,
     message:Text?=none,
+    theme:Theme=Theme.Dark,
 )
     func draw(self:TableViewer)
         size := get_size()
-        style(fg=Black, bg=Blue)
+        self.theme.header()
         write(" Codepoint Symbol Description ", ScreenVec2(0,0))
         clear(Right)
 
         for y in (1).to(size.y - 1)
             row := self._top + y - 1
             entry := self.get_entry(row) or skip
-            entry.draw(y, highlighted=(row == self._cursor))
+            entry.draw(y, theme=self.theme, highlighted=(row == self._cursor))
 
         if self.show_info
             if entry := self.get_entry()
@@ -185,25 +182,23 @@ struct TableViewer(
                 value_width := (_max_: v.width() for v in info.values)! _max_ 50
                 width := label_width + 3 + value_width
                 top_left := ScreenVec2(size.x - width - 1, 1)
-                box_color := Color.Color256(222)
-                style(bg=box_color, fg=box_color)
+                self.theme.box()
                 fill_box(top_left, ScreenVec2(width, height))
-                style(fg=Color256(94))
                 for i,label in info.keys
                     write(label, pos=top_left + ScreenVec2(label_width + 1, i), Right)
-                style(fg=Black)
+                self.theme.box_details()
                 for i,value in info.values
                     write(value, pos=top_left + ScreenVec2(label_width + 2, i), Left)
 
         if search := self.search
-            style(bg=Color256((if self.search_start then Byte(69) else Byte(27))), fg=Color(232))
+            self.theme.search_label(self.search_start != none)
             write(" Search: ", ScreenVec2(0, size.y-1))
-            style(bg=Color256(235), fg=Color256((if self.search_start then Byte(255) else Byte(242))), bold=yes)
+            self.theme.search_text(self.search_start != none)
             write(" "++search)
             clear(Right)
 
         if message := self.message
-            style(bg=Color256(252), fg=Color256(232), bold=yes)
+            self.theme.message_theme()
             write(" $message ", ScreenVec2(size.x-1, size.y-1), Right)
             clear(Right)
 
@@ -211,13 +206,13 @@ struct TableViewer(
         scroll_height := size.y-2
         scroll_top := 1 + (self._top * scroll_height)/self.entries.length
         scroll_bottom := 1 + ((self._top + scroll_height - 1) * scroll_height)/self.entries.length
-        style(bg=Color256(237))
+        self.theme.scroll_bg()
         for y in (1).to(scroll_top-1, step=1)
             write(" ", ScreenVec2(size.x-1, y))
-        style(bg=Color256(247))
+        self.theme.scroll_bar()
         for y in (scroll_top).to(scroll_bottom, step=1)
             write(" ", ScreenVec2(size.x-1, y))
-        style(bg=Color256(237))
+        self.theme.scroll_bg()
         for y in (scroll_bottom+1).to(size.y-1, step=1)
             write(" ", ScreenVec2(size.x-1, y))
 
@@ -385,7 +380,7 @@ func copy_to_clipboard(text:Text -> Bool)
     `
     return success
 
-func main(codepoint|c:Int32?=none, text|t:Text?=none)
+func main(codepoint|c:Int32?=none, text|t:Text?=none, theme|T:Theme?=none)
     C_code `
         static const char unicode_table[] = {
             #embed "../UnicodeData.txt"
@@ -397,7 +392,7 @@ func main(codepoint|c:Int32?=none, text|t:Text?=none)
     set_mode(TUI)
     hide_cursor()
 
-    viewer := TableViewer(table_lines)
+    viewer := TableViewer(table_lines, theme=theme or Theme.guess())
 
     # Set cursor position according to CLI flags
     if c := codepoint
