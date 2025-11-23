@@ -19,6 +19,38 @@ _HELP := "
 
 "
 
+CATEGORY_NAMES := {
+    "Cc": "Control",
+    "Cf": "Format",
+    "Co": "Private Use",
+    "Cs": "Surrrogate",
+    "Ll": "Lowercase Letter",
+    "Lm": "Modifier Letter",
+    "Lo": "Other Letter",
+    "Lt": "Titlecase Letter",
+    "Lu": "Uppercase Letter",
+    "Mc": "Spacing Mark",
+    "Me": "Enclosing Mark",
+    "Mn": "Nonspacing Mark",
+    "Nd": "Decimal Number",
+    "Nl": "Letter Number",
+    "No": "Other Number",
+    "Pc": "Connector Punctuation",
+    "Pd": "Dash Punctuation",
+    "Pe": "Close Punctuation",
+    "Pf": "Final Punctuation",
+    "Pi": "Initial Punctuation",
+    "Po": "Other Punctuation",
+    "Ps": "Open Punctuation",
+    "Sc": "Currency Symbol",
+    "Sk": "Modifier Symbol",
+    "Sm": "Math Symbol",
+    "So": "Other Symbol",
+    "Zl": "Line Separator",
+    "Zp": "Paragraph Separator",
+    "Zs": "Space Separator",
+}
+
 struct UnicodeEntry(
     codepoint:Int32,
     text:Text?=none,
@@ -52,7 +84,7 @@ struct UnicodeEntry(
         entry.digit = Int.parse(items[8] or return none, &junk)
         entry.numeric = Int.parse(items[9] or return none, &junk)
         entry.mirrored = items[10] == "Y"
-        entry.unicode_1_name = items[11]
+        entry.unicode_1_name = (if items[11]!.length > 0 then items[11]!)
         entry.iso_comment = items[12]
         entry.simple_uppercase = Int32.parse("0x"++(items[13] or return none), &junk)
         entry.simple_lowercase = Int32.parse("0x"++(items[14] or return none), &junk)
@@ -65,9 +97,8 @@ struct UnicodeEntry(
             "UTF32": "$(self.codepoint.hex()) ($(self.codepoint))",
             "UTF16": (if text := self.text then " ".join([u.hex() for u in text.utf16()]) ++ " (" ++ " ".join([Text(u) for u in text.utf16()]) ++ ")" else "")
             "UTF8": (if text := self.text then " ".join([b.hex() for b in text.utf8()]) else "")
-            "Name": self.name,
-            "Unicode 1 name": self.unicode_1_name or "",
-            "Category": self.category,
+            "Name": (if unicode1 := self.unicode_1_name then "$(self.name) ($unicode1)" else self.name),
+            "Category": (if cat := CATEGORY_NAMES[self.category] then "$cat ($(self.category))" else self.category),
             "Combining class": self.combining_class,
             "Bidi class": self.bidi_class,
             "Decomposition": self.decomposition_mapping,
