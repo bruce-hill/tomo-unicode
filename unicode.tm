@@ -51,6 +51,59 @@ CATEGORY_NAMES := {
     "Zs": "Space Separator",
 }
 
+BIDI_NAMES := {
+    "AL": "Arabic Letter",
+    "AN": "Arabic Number",
+    "B": "Paragraph Separator",
+    "BN": "Boundary Neutral",
+    "CS": "Common Separator",
+    "EN": "European Number",
+    "ES": "European Separator",
+    "ET": "European Terminator",
+    "FSI": "First Strong Isolate",
+    "L": "Left To Right",
+    "LRE": "Left To Right Embedding",
+    "LRI": "Left To Right Isolate",
+    "LRO": "Left To Right Override",
+    "NSM": "Nonspacing Mark",
+    "ON": "Other Neutral",
+    "PDF": "Pop Directional Format",
+    "PDI": "Pop Directional Isolate",
+    "R": "Right To Left",
+    "RLE": "Right To Left Embedding",
+    "RLI": "Right To Left Isolate",
+    "RLO": "Right To Left Override",
+    "S": "Segment Separator",
+    "WS": "White Space",
+}
+
+struct UnicodeBlock(first,last:Int32, description:Text)
+    UNICODE_BLOCKS : [UnicodeBlock] = UnicodeBlock.load_all()
+
+    func load_all(-> [UnicodeBlock])
+        C_code `
+            static const char unicode_blocks[] = {
+                #embed "../UnicodeBlocks.txt"
+                ,0,
+            };
+        `
+        blocks : &[UnicodeBlock] = &[]
+        for line in C_code:Text`Text$from_str(unicode_blocks)`.lines()
+            skip if line.length == 0 or line.starts_with("#")
+            chunks := line.split("..")
+            chunks2 := chunks[2]!.split("; ")
+            low := Int32.parse("0x"++chunks[1]!)!
+            high := Int32.parse("0x"++chunks2[1]!)!
+            block := UnicodeBlock(low, high, chunks2[2]!)
+            blocks.insert(block)
+        assert blocks.length > 0
+        return blocks
+
+    func find(codepoint:Int32 -> UnicodeBlock?)
+        i := UnicodeBlock.UNICODE_BLOCKS.binary_search(UnicodeBlock(codepoint, codepoint, ""))
+        return UnicodeBlock.UNICODE_BLOCKS[i]
+
+
 struct UnicodeEntry(
     codepoint:Int32,
     text:Text?=none,
@@ -92,15 +145,18 @@ struct UnicodeEntry(
         return entry
 
     func info(self:UnicodeEntry -> {Text:Text})
+        block := UnicodeBlock.find(self.codepoint)
         return {
             "Symbol": (if self.codepoint > 32 then self.text or "" else ""),
+            "Block": (if b := block then b.description else ""),
             "UTF32": "$(self.codepoint.hex()) ($(self.codepoint))",
             "UTF16": (if text := self.text then " ".join([u.hex() for u in text.utf16()]) ++ " (" ++ " ".join([Text(u) for u in text.utf16()]) ++ ")" else "")
             "UTF8": (if text := self.text then " ".join([b.hex() for b in text.utf8()]) else "")
-            "Name": (if unicode1 := self.unicode_1_name then "$(self.name) ($unicode1)" else self.name),
+            "Name": self.name,
+            "Unicode 1 name": self.unicode_1_name or "",
             "Category": (if cat := CATEGORY_NAMES[self.category] then "$cat ($(self.category))" else self.category),
             "Combining class": self.combining_class,
-            "Bidi class": self.bidi_class,
+            "Bidi class": (if bidi_name := BIDI_NAMES[self.bidi_class] then "$bidi_name ($(self.bidi_class))" else self.bidi_class),
             "Decomposition": self.decomposition_mapping,
             "Digit": (if d := self.digit then Text(d) else ""),
             "Mirrored": Text(self.mirrored),
@@ -378,17 +434,14 @@ func copy_to_clipboard(text:Text -> Bool)
     `
     return success
 
-func main(unicode_data:Path?=none)
+func main()
     C_code `
         static const char unicode_table[] = {
             #embed "../UnicodeData.txt"
             ,0,
         };
     `
-    table_lines := if file := unicode_data
-        file.lines()!
-    else
-        C_code:Text`Text$from_str(unicode_table)`.lines()
+    table_lines := C_code:Text`Text$from_str(unicode_table)`.lines()
 
     viewer := TableViewer(table_lines)
 
