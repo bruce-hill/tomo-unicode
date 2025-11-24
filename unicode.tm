@@ -4,7 +4,8 @@ use <sys/wait.h>
 use ./names.tm
 use ./themes.tm
 
-_HELP := "
+BINARY: "unicode"
+HELP: "
     `unicode` is a Tomo program to view information about the Unicode 3.1 standard
     codepoints. The table viewer is an interactive text user interface with the
     following controls:
@@ -19,8 +20,12 @@ _HELP := "
         Ctrl+f or /    - Search for text (enter to confirm)
         n/N            - Jump to next/previous search result
         i              - Toggle info panel
-
 "
+MANPAGE_DESCRIPTION: "
+    `unicode` is a Tomo program to view information about the Unicode 3.1 standard
+    codepoints. The table viewer is an interactive text user interface.
+"
+LICENSE: (./LICENSE.md)
 
 struct UnicodeBlock(first,last:Int32, description:Text)
     UNICODE_BLOCKS : [UnicodeBlock] = UnicodeBlock.load_all()
