@@ -42,8 +42,8 @@ struct UnicodeBlock(first,last:Int32, description:Text)
             skip if line.length == 0 or line.starts_with("#")
             sections := line.split(";")
             range := sections[1]!.split("..")
-            low := Int32.parse("0x"++range[1]!)!
-            high := Int32.parse("0x"++range[2]!)!
+            low := Int32.parse(range[1]!, 16)!
+            high := Int32.parse(range[2]!, 16)!
             block := UnicodeBlock(low, high, sections[2]!.trim())
             blocks.insert(block)
         assert blocks.length > 0
@@ -75,7 +75,7 @@ struct UnicodeEntry(
     func parse(text:Text -> UnicodeEntry?)
         # For format details, see: https://www.unicode.org/L2/L1999/UnicodeData.html
         items := text.split(";")
-        entry := UnicodeEntry(Int32.parse("0x"++(items[1] or return none)) or return none)
+        entry := UnicodeEntry(Int32.parse((items[1] or return none), 16) or return none)
         entry.text = Text.from_utf32([entry.codepoint])
         entry.name = items[2] or return none
         entry.category = items[3] or return none
@@ -83,15 +83,15 @@ struct UnicodeEntry(
         entry.bidi_class = items[5] or return none
         entry.decomposition_mapping = items[6] or return none
         junk : Text
-        entry.decimal_digit = Int.parse(items[7] or return none, &junk)
-        entry.digit = Int.parse(items[8] or return none, &junk)
-        entry.numeric = Int.parse(items[9] or return none, &junk)
+        entry.decimal_digit = Int.parse(items[7] or return none, remainder=&junk)
+        entry.digit = Int.parse(items[8] or return none, remainder=&junk)
+        entry.numeric = Int.parse(items[9] or return none, remainder=&junk)
         entry.mirrored = items[10] == "Y"
         entry.unicode_1_name = (if items[11]!.length > 0 then items[11]!)
         entry.iso_comment = items[12]
-        entry.simple_uppercase = Int32.parse("0x"++(items[13] or return none), &junk)
-        entry.simple_lowercase = Int32.parse("0x"++(items[14] or return none), &junk)
-        entry.simple_titlecase = Int32.parse("0x"++(items[15] or return none), &junk)
+        entry.simple_uppercase = Int32.parse((items[13] or return none), 16, &junk)
+        entry.simple_lowercase = Int32.parse((items[14] or return none), 16, &junk)
+        entry.simple_titlecase = Int32.parse((items[15] or return none), 16, &junk)
         return entry
 
     func info(self:UnicodeEntry -> {Text:Text})
