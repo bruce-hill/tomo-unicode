@@ -3,13 +3,7 @@ use btui
 
 enum Theme(Dark, Light, None)
     func guess(->Theme)
-        if bg := get_bg()
-            if bg.is_light()
-                return Theme.Light
-            else
-                return Theme.Dark
-        else
-            return Theme.Dark
+        return Theme.Dark
 
     func header(theme:Theme)
         when theme is Dark
