@@ -25,7 +25,7 @@ MANPAGE_DESCRIPTION: "
     `unicode` is a Tomo program to view information about the Unicode 3.1 standard
     codepoints. The table viewer is an interactive text user interface.
 "
-LICENSE: (./LICENSE.md)
+LICENSE: ./LICENSE.md
 
 struct UnicodeBlock(first,last:Int32, description:Text)
     UNICODE_BLOCKS : [UnicodeBlock] = UnicodeBlock.load_all()
@@ -50,7 +50,8 @@ struct UnicodeBlock(first,last:Int32, description:Text)
         return blocks
 
     func find(codepoint:Int32 -> UnicodeBlock?)
-        i := UnicodeBlock.UNICODE_BLOCKS.binary_search(UnicodeBlock(codepoint, codepoint, ""))
+        target := UnicodeBlock(codepoint, codepoint, "")
+        i := UnicodeBlock.UNICODE_BLOCKS.binary_search(func(b:&UnicodeBlock) b[] >= target) or return none
         return UnicodeBlock.UNICODE_BLOCKS[i]
 
 
