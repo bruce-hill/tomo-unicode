@@ -17,6 +17,7 @@ HELP: "
         Ctrl+c or y    - Copy the text of an entry to the clipboard
         u              - Copy the codepoint of an entry (U+XXXX) to the clipboard
         d              - Copy the decimal codepoint of an entry to the clipboard
+        p              - Exit and print the unicode entry to stdout
         Ctrl+f or /    - Search for text (enter to confirm)
         n/N            - Jump to next/previous search result
         i              - Toggle info panel
@@ -271,6 +272,13 @@ struct TableViewer(
                         self.message = "Copied text!"
                     else
                         self.message = "Failed to copy to clipboard!"
+        is "p"
+            if entry := self.get_entry()
+                if text := entry.text
+                    disable()
+                    print(text)
+                    exit()
+            
         is "u"
             if entry := self.get_entry()
                 if copy_to_clipboard("U+$(entry.codepoint.hex())")
